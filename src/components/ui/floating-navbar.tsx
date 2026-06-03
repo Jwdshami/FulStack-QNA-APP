@@ -7,6 +7,8 @@ import {
   useMotionValueEvent,
 } from "motion/react";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/src/store/Auth";
+import Link from "next/link";
 
 export const FloatingNav = ({
   navItems,
@@ -21,6 +23,7 @@ export const FloatingNav = ({
 }) => {
   const { scrollYProgress } = useScroll();
   const [visible, setVisible] = useState(false);
+  const { user, logout } = useAuthStore();
 
   useMotionValueEvent(scrollYProgress, "change", (current) => {
     if (typeof current === "number") {
@@ -61,7 +64,7 @@ export const FloatingNav = ({
           {/* Nav items container */}
           <div className="flex items-center gap-1">
             {navItems.map((navItem, idx: number) => (
-              <a
+              <Link
                 key={`link-${idx}`}
                 href={navItem.link}
                 className={cn(
@@ -70,17 +73,29 @@ export const FloatingNav = ({
               >
                 <span className="block sm:hidden">{navItem.icon}</span>
                 <span className="hidden sm:block">{navItem.name}</span>
-              </a>
+              </Link>
             ))}
           </div>
 
           {/* Divider */}
           <div className="h-5 w-px bg-neutral-200 dark:bg-white/10" />
 
-          {/* CTA Button */}
-          <button className="relative rounded-full bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-neutral-800 hover:shadow-lg hover:shadow-neutral-900/20 dark:bg-white dark:text-black dark:hover:bg-neutral-100 dark:hover:shadow-white/20">
-            <span>Login</span>
-          </button>
+          {/* CTA Button - shows Login or Logout based on auth state */}
+          {user ? (
+            <button
+              onClick={logout}
+              className="relative rounded-full bg-red-500 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-red-600 hover:shadow-lg hover:shadow-red-500/20"
+            >
+              <span>Logout</span>
+            </button>
+          ) : (
+            <Link
+              href="/login"
+              className="relative rounded-full bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-neutral-800 hover:shadow-lg hover:shadow-neutral-900/20 dark:bg-white dark:text-black dark:hover:bg-neutral-100 dark:hover:shadow-white/20"
+            >
+              <span>Login</span>
+            </Link>
+          )}
         </div>
       </motion.div>
     </AnimatePresence>

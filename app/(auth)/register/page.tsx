@@ -49,11 +49,11 @@ export default function Register() {
         setIsLoading(() => true);
         setError(() => "");
 
-        const response = await createAccount(
-            `${firstname} ${lastname}`,
-            email.toString(),
-            password.toString()
-        );
+       const response = await createAccount(
+    email.toString(),
+    password.toString(),
+    `${firstname} ${lastname}`
+);
 
         if (response.error) {
             setError(() => response.error!.message);

@@ -1,11 +1,22 @@
+// app/components/HeroSectionHeader.tsx
 "use client";
 
-import IconCloud from "@/src/components/magicui/icon-cloud";
+import dynamic from "next/dynamic";
 import Particles from "@/src/components/magicui/particles";
 import ShimmerButton from "@/src/components/magicui/shimmer-button";
 import { useAuthStore } from "@/src/store/Auth";
 import Link from "next/link";
 import React from "react";
+
+
+const IconCloud = dynamic(() => import("@/src/components/magicui/icon-cloud"), {
+    ssr: false,
+    loading: () => (
+        <div className="flex h-[32rem] w-full items-center justify-center">
+            <p className="text-white/50">Loading...</p>
+        </div>
+    ),
+});
 
 const slugs = [
     "typescript",
