@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import Header from "./components/Header";
+import Footer from "./components/Footer";  // ✅ ADD THIS
 import getOrCreateDB from "@/src/models/server/dbsetup";
 import getOrCreateStorage from "@/src/models/server/storage";
 
@@ -26,6 +27,7 @@ export default async function RootLayout({
       <body className={cn(inter.className, "dark:bg-black dark:text-white")}>
         <Header />
         {children}
+        <Footer />  {/* ✅ ADD THIS */}
       </body>
     </html>
   );

@@ -26,51 +26,76 @@ import DeleteQuestion from "./DeleteQuestion";
 import EditQuestion from "./EditQuestion";
 import { TracingBeam } from "@/src/components/ui/tracing-beam";
 
-const Page = async ({ params }: { params: { quesId: string; quesName: string } }) => {
+const Page = async ({ params }: { params: Promise<{ quesId: string; quesName: string }> }) => {
+    // ✅ FIXED: Await params before accessing properties (Next.js 15+)
+    const { quesId, quesName } = await params;
+    
     const [question, answers, upvotes, downvotes, comments] = await Promise.all([
-        databases.getDocument(db, questionsCollection, params.quesId),
+        databases.getDocument(db, questionsCollection, quesId),
         databases.listDocuments(db, answersCollection, [
             Query.orderDesc("$createdAt"),
-            Query.equal("questionId", params.quesId),
+            Query.equal("questionId", quesId),
         ]),
         databases.listDocuments(db, votesCollection, [
-            Query.equal("typeId", params.quesId),
+            Query.equal("typeId", quesId),
             Query.equal("type", "question"),
             Query.equal("voteStatus", "upvoted"),
-            Query.limit(1), // for optimization
+            Query.limit(1),
         ]),
         databases.listDocuments(db, votesCollection, [
-            Query.equal("typeId", params.quesId),
+            Query.equal("typeId", quesId),
             Query.equal("type", "question"),
             Query.equal("voteStatus", "downvoted"),
-            Query.limit(1), // for optimization
+            Query.limit(1),
         ]),
         databases.listDocuments(db, commentsCollection, [
             Query.equal("type", "question"),
-            Query.equal("typeId", params.quesId),
+            Query.equal("typeId", quesId),
             Query.orderDesc("$createdAt"),
         ]),
     ]);
 
-    // since it is dependent on the question, we fetch it here outside of the Promise.all
-    const author = await users.get<UserPrefs>(question.authorId);
+    // ✅ FIXED: Check if question.authorId exists before fetching
+    let author = null;
+    if (question.authorId) {
+        author = await users.get<UserPrefs>(question.authorId);
+    }
+
     [comments.documents, answers.documents] = await Promise.all([
         Promise.all(
             comments.documents.map(async comment => {
-                const author = await users.get<UserPrefs>(comment.authorId);
+                // ✅ FIXED: Add null check for comment.authorId
+                if (!comment.authorId) {
+                    return {
+                        ...comment,
+                        author: null,
+                    };
+                }
+                const commentAuthor = await users.get<UserPrefs>(comment.authorId);
                 return {
                     ...comment,
                     author: {
-                        $id: author.$id,
-                        name: author.name,
-                        reputation: author.prefs.reputation,
+                        $id: commentAuthor.$id,
+                        name: commentAuthor.name,
+                        reputation: commentAuthor.prefs.reputation,
                     },
                 };
             })
         ),
         Promise.all(
             answers.documents.map(async answer => {
-                const [author, comments, upvotes, downvotes] = await Promise.all([
+                // ✅ FIXED: Add null check for answer.authorId
+                if (!answer.authorId) {
+                    return {
+                        ...answer,
+                        comments: { documents: [] },
+                        upvotesDocuments: { total: 0, documents: [] },
+                        downvotesDocuments: { total: 0, documents: [] },
+                        author: null,
+                    };
+                }
+
+                const [answerAuthor, answerComments, answerUpvotes, answerDownvotes] = await Promise.all([
                     users.get<UserPrefs>(answer.authorId),
                     databases.listDocuments(db, commentsCollection, [
                         Query.equal("typeId", answer.$id),
@@ -81,25 +106,32 @@ const Page = async ({ params }: { params: { quesId: string; quesName: string } }
                         Query.equal("typeId", answer.$id),
                         Query.equal("type", "answer"),
                         Query.equal("voteStatus", "upvoted"),
-                        Query.limit(1), // for optimization
+                        Query.limit(1),
                     ]),
                     databases.listDocuments(db, votesCollection, [
                         Query.equal("typeId", answer.$id),
                         Query.equal("type", "answer"),
                         Query.equal("voteStatus", "downvoted"),
-                        Query.limit(1), // for optimization
+                        Query.limit(1),
                     ]),
                 ]);
 
-                comments.documents = await Promise.all(
-                    comments.documents.map(async comment => {
-                        const author = await users.get<UserPrefs>(comment.authorId);
+                answerComments.documents = await Promise.all(
+                    answerComments.documents.map(async comment => {
+                        // ✅ FIXED: Add null check for comment.authorId
+                        if (!comment.authorId) {
+                            return {
+                                ...comment,
+                                author: null,
+                            };
+                        }
+                        const commentAuthor = await users.get<UserPrefs>(comment.authorId);
                         return {
                             ...comment,
                             author: {
-                                $id: author.$id,
-                                name: author.name,
-                                reputation: author.prefs.reputation,
+                                $id: commentAuthor.$id,
+                                name: commentAuthor.name,
+                                reputation: commentAuthor.prefs.reputation,
                             },
                         };
                     })
@@ -107,18 +139,44 @@ const Page = async ({ params }: { params: { quesId: string; quesName: string } }
 
                 return {
                     ...answer,
-                    comments,
-                    upvotesDocuments: upvotes,
-                    downvotesDocuments: downvotes,
+                    comments: answerComments,
+                    upvotesDocuments: answerUpvotes,
+                    downvotesDocuments: answerDownvotes,
                     author: {
-                        $id: author.$id,
-                        name: author.name,
-                        reputation: author.prefs.reputation,
+                        $id: answerAuthor.$id,
+                        name: answerAuthor.name,
+                        reputation: answerAuthor.prefs.reputation,
                     },
                 };
             })
         ),
     ]);
+
+    // ✅ FIXED: Show error if author couldn't be loaded
+    if (!author) {
+        return <div className="text-center pt-20 text-red-500">Error loading question author</div>;
+    }
+
+    // ✅ FIXED: Convert Appwrite objects to plain objects before passing to Client Components
+    const plainAnswers = {
+        total: answers.total,
+        documents: answers.documents,
+    };
+
+    const plainComments = {
+        total: comments.total,
+        documents: comments.documents,
+    };
+
+    const plainUpvotes = {
+        total: upvotes.total,
+        documents: upvotes.documents,
+    };
+
+    const plainDownvotes = {
+        total: downvotes.total,
+        documents: downvotes.documents,
+    };
 
     return (
         <TracingBeam className="container pl-6">
@@ -137,8 +195,8 @@ const Page = async ({ params }: { params: { quesId: string; quesName: string } }
                             <span>
                                 Asked {convertDateToRelativeTime(new Date(question.$createdAt))}
                             </span>
-                            <span>Answer {answers.total}</span>
-                            <span>Votes {upvotes.total + downvotes.total}</span>
+                            <span>Answer {plainAnswers.total}</span>
+                            <span>Votes {plainUpvotes.total + plainDownvotes.total}</span>
                         </div>
                     </div>
                     <Link href="/questions/ask" className="ml-auto inline-block shrink-0">
@@ -156,8 +214,8 @@ const Page = async ({ params }: { params: { quesId: string; quesName: string } }
                             type="question"
                             id={question.$id}
                             className="w-full"
-                            upvotes={upvotes}
-                            downvotes={downvotes}
+                            upvotes={plainUpvotes}
+                            downvotes={plainDownvotes}
                         />
                         <EditQuestion
                             questionId={question.$id}
@@ -168,20 +226,25 @@ const Page = async ({ params }: { params: { quesId: string; quesName: string } }
                     </div>
                     <div className="w-full overflow-auto">
                         <MarkdownPreview className="rounded-xl p-4" source={question.content} />
-                        <picture>
-                            <img
-                                src={
-                                    storage.getFilePreview(
-                                        questionATTACHMENTS_BUCKET,
-                                        question.attachmentId
-                                    ).toString()
-                                }
-                                alt={question.title}
-                                className="mt-3 rounded-lg"
-                            />
-                        </picture>
+                        
+                        {/* ✅ FIXED: Added null check for attachmentId */}
+                        {question.attachmentId && (
+                            <picture>
+                                <img
+                                    src={
+                                        storage.getFilePreview(
+                                            questionATTACHMENTS_BUCKET,
+                                            question.attachmentId
+                                        ).toString()
+                                    }
+                                    alt={question.title}
+                                    className="mt-3 rounded-lg"
+                                />
+                            </picture>
+                        )}
+
                         <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
-                            {question.tags.map((tag: string) => (
+                            {question.tags?.map((tag: string) => (
                                 <Link
                                     key={tag}
                                     href={`/questions?tag=${tag}`}
@@ -212,7 +275,7 @@ const Page = async ({ params }: { params: { quesId: string; quesName: string } }
                             </div>
                         </div>
                         <Comments
-                            comments={comments}
+                            comments={plainComments}
                             className="mt-4"
                             type="question"
                             typeId={question.$id}
@@ -220,7 +283,7 @@ const Page = async ({ params }: { params: { quesId: string; quesName: string } }
                         <hr className="my-4 border-white/40" />
                     </div>
                 </div>
-                <Answers answers={answers} questionId={question.$id} />
+                <Answers answers={plainAnswers} questionId={question.$id} />
             </div>
         </TracingBeam>
     );

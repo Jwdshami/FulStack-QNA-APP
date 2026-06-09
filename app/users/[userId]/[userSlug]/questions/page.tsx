@@ -6,19 +6,20 @@ import { UserPrefs } from "@/src/store/Auth";
 import { Query } from "node-appwrite";
 import React from "react";
 
+// ✅ FIXED: params is now a Promise in Next.js 15+
 const Page = async ({
     params,
     searchParams,
 }: {
-    params: { userId: string; userSlug: string };
-    searchParams: { page?: string };
+    params: Promise<{ userId: string; userSlug: string }>;
+    searchParams: Promise<{ page?: string }>;
 }) => {
-    searchParams.page ||= "1";
-
+    const { userId } = await params;  // ✅ Await params
+    const { page = "1" } = await searchParams;  // ✅ Await searchParams
     const queries = [
-        Query.equal("authorId", params.userId),
+        Query.equal("authorId", userId),  // ✅ Use userId
         Query.orderDesc("$createdAt"),
-        Query.offset((+searchParams.page - 1) * 25),
+        Query.offset((+page - 1) * 25),
         Query.limit(25),
     ];
 
@@ -30,12 +31,12 @@ const Page = async ({
                 users.get<UserPrefs>(ques.authorId),
                 databases.listDocuments(db, answersCollection, [
                     Query.equal("questionId", ques.$id),
-                    Query.limit(1), // for optimization
+                    Query.limit(1),
                 ]),
                 databases.listDocuments(db, votesCollection, [
                     Query.equal("type", "question"),
                     Query.equal("typeId", ques.$id),
-                    Query.limit(1), // for optimization
+                    Query.limit(1),
                 ]),
             ]);
 

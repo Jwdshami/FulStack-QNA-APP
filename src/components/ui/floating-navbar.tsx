@@ -22,22 +22,15 @@ export const FloatingNav = ({
   className?: string;
 }) => {
   const { scrollYProgress } = useScroll();
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible] = useState(true); // ✅ CHANGED: true instead of false
   const { user, logout } = useAuthStore();
 
   useMotionValueEvent(scrollYProgress, "change", (current) => {
     if (typeof current === "number") {
       const direction = current - scrollYProgress.getPrevious()!;
 
-      if (scrollYProgress.get() < 0.05) {
-        setVisible(false);
-      } else {
-        if (direction < 0) {
-          setVisible(true);
-        } else {
-          setVisible(false);
-        }
-      }
+      // ✅ CHANGED: Show navbar always (removed the scroll logic)
+      setVisible(true);
     }
   });
 
@@ -46,11 +39,11 @@ export const FloatingNav = ({
       <motion.div
         initial={{
           opacity: 1,
-          y: -100,
+          y: 0, // ✅ CHANGED: 0 instead of -100
         }}
         animate={{
-          y: visible ? 0 : -100,
-          opacity: visible ? 1 : 0,
+          y: visible ? 0 : 0, // ✅ CHANGED: Always 0
+          opacity: visible ? 1 : 1, // ✅ CHANGED: Always 1
         }}
         transition={{
           duration: 0.2,

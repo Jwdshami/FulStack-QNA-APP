@@ -2,7 +2,7 @@
 import HeroSection from "./components/HeroSection";
 import LatestQuestions from "./components/LatestQuestions";
 import TopContributers from "./components/TopContributers";
-import Footer from "./components/Footer";
+// ❌ Remove this: import Footer from "./components/Footer";
 
 export default function Home() {
   return (
@@ -20,7 +20,7 @@ export default function Home() {
           </div>
         </div>
       </div>
-      <Footer />
+      {/* ❌ Remove this: <Footer /> */}
     </main>
   );
 }

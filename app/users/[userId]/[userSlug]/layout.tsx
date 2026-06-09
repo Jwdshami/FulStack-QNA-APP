@@ -7,14 +7,16 @@ import EditButton from "./EditButton";
 import Navbar from "./Navbar";
 import { IconClockFilled, IconUserFilled } from "@tabler/icons-react";
 
+// ✅ FIXED: params is now a Promise in Next.js 15+
 const Layout = async ({
     children,
     params,
 }: {
     children: React.ReactNode;
-    params: { userId: string; userSlug: string };
+    params: Promise<{ userId: string; userSlug: string }>;
 }) => {
-    const user = await users.get<UserPrefs>(params.userId);
+    const { userId } = await params;  // ✅ Await params
+    const user = await users.get<UserPrefs>(userId);  // ✅ Use userId
 
     return (
         <div className="container mx-auto space-y-4 px-4 pb-20 pt-32">
