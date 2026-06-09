@@ -21,7 +21,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center py-12">
-      <BackgroundBeams />
+      {/* <BackgroundBeams /> */}
       <div className="relative">{children}</div>
     </div>
   );
