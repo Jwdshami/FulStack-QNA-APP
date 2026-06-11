@@ -5,9 +5,16 @@ import { db, votesCollection } from "@/src/models/name";
 import { useAuthStore } from "@/src/store/Auth";
 import { cn } from "@/lib/utils";
 import { IconCaretUpFilled, IconCaretDownFilled } from "@tabler/icons-react";
-import { ID, Models, Query } from "appwrite";
+import { Models, Query } from "appwrite";
 import { useRouter } from "next/navigation";
 import React from "react";
+
+interface VoteDocument extends Models.Document {
+    voteStatus: "upvoted" | "downvoted";
+    votedById: string;
+    type: "question" | "answer";
+    typeId: string;
+}
 
 const VoteButtons = ({
     type,
@@ -22,7 +29,7 @@ const VoteButtons = ({
     downvotes: Models.DocumentList<Models.Document>;
     className?: string;
 }) => {
-    const [votedDocument, setVotedDocument] = React.useState<Models.Document | null>(); // undefined means not fetched yet
+    const [votedDocument, setVotedDocument] = React.useState<VoteDocument | null | undefined>();
     const [voteResult, setVoteResult] = React.useState<number>(upvotes.total - downvotes.total);
 
     const { user } = useAuthStore();
@@ -36,16 +43,15 @@ const VoteButtons = ({
                     Query.equal("typeId", id),
                     Query.equal("votedById", user.$id),
                 ]);
-                setVotedDocument(() => response.documents[0] || null);
+                // ✅ Fixed: cast through unknown first
+                setVotedDocument(() => (response.documents[0] as unknown as VoteDocument) || null);
             }
         })();
     }, [user, id, type]);
 
     const toggleUpvote = async () => {
         if (!user) return router.push("/login");
-
         if (votedDocument === undefined) return;
-
         try {
             const response = await fetch(`/api/vote`, {
                 method: "POST",
@@ -56,13 +62,10 @@ const VoteButtons = ({
                     typeId: id,
                 }),
             });
-
             const data = await response.json();
-
             if (!response.ok) throw data;
-
             setVoteResult(() => data.data.voteResult);
-            setVotedDocument(() => data.data.document);
+            setVotedDocument(() => data.data.document as unknown as VoteDocument);
         } catch (error: any) {
             window.alert(error?.message || "Something went wrong");
         }
@@ -70,9 +73,7 @@ const VoteButtons = ({
 
     const toggleDownvote = async () => {
         if (!user) return router.push("/login");
-
         if (votedDocument === undefined) return;
-
         try {
             const response = await fetch(`/api/vote`, {
                 method: "POST",
@@ -83,13 +84,10 @@ const VoteButtons = ({
                     typeId: id,
                 }),
             });
-
             const data = await response.json();
-
             if (!response.ok) throw data;
-
             setVoteResult(() => data.data.voteResult);
-            setVotedDocument(() => data.data.document);
+            setVotedDocument(() => data.data.document as unknown as VoteDocument);
         } catch (error: any) {
             window.alert(error?.message || "Something went wrong");
         }
@@ -100,7 +98,7 @@ const VoteButtons = ({
             <button
                 className={cn(
                     "flex h-10 w-10 items-center justify-center rounded-full border p-1 duration-200 hover:bg-white/10",
-                    votedDocument && votedDocument?.voteStatus === "upvoted"
+                    votedDocument?.voteStatus === "upvoted"
                         ? "border-orange-500 text-orange-500"
                         : "border-white/30"
                 )}
@@ -112,7 +110,7 @@ const VoteButtons = ({
             <button
                 className={cn(
                     "flex h-10 w-10 items-center justify-center rounded-full border p-1 duration-200 hover:bg-white/10",
-                    votedDocument && votedDocument?.voteStatus === "downvoted"
+                    votedDocument?.voteStatus === "downvoted"
                         ? "border-orange-500 text-orange-500"
                         : "border-white/30"
                 )}

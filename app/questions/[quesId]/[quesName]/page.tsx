@@ -275,7 +275,7 @@ const Page = async ({ params }: { params: Promise<{ quesId: string; quesName: st
                             </div>
                         </div>
                         <Comments
-                            comments={plainComments}
+                            comments={plainComments as any}
                             className="mt-4"
                             type="question"
                             typeId={question.$id}
@@ -283,7 +283,7 @@ const Page = async ({ params }: { params: Promise<{ quesId: string; quesName: st
                         <hr className="my-4 border-white/40" />
                     </div>
                 </div>
-                <Answers answers={plainAnswers} questionId={question.$id} />
+                <Answers answers={plainAnswers as any} questionId={question.$id} />
             </div>
         </TracingBeam>
     );

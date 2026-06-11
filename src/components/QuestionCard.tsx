@@ -8,7 +8,23 @@ import slugify from "@/src/utils/slugify";
 import { avatars } from "@/src/models/client/config";
 import convertDateToRelativeTime from "@/src/utils/relativeTime";
 
-const QuestionCard = ({ ques }: { ques: Models.Document }) => {
+// ✅ Add this interface
+interface QuestionDocument extends Models.Document {
+    title: string;
+    content: string;
+    authorId: string;
+    tags: string[];
+    totalVotes: number;
+    totalAnswers: number;
+    author: {
+        $id: string;
+        name: string;
+        reputation: number;
+    };
+}
+
+// ✅ Change prop type here
+const QuestionCard = ({ ques }: { ques: QuestionDocument }) => {
     const [height, setHeight] = React.useState(0);
     const ref = React.useRef<HTMLDivElement>(null);
 
@@ -48,7 +64,7 @@ const QuestionCard = ({ ques }: { ques: Models.Document }) => {
                     <div className="ml-auto flex items-center gap-1">
                         <picture>
                             <img
-                                src={avatars.getInitials(ques.author.name, 24, 24).href}
+                                src={avatars.getInitials(ques.author.name, 24, 24).toString()}
                                 alt={ques.author.name}
                                 className="rounded-lg"
                             />

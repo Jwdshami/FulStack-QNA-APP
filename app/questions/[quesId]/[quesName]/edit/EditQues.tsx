@@ -27,7 +27,7 @@ const EditQues = ({ question }: { question: Models.Document }) => {
                 <div className="flex flex-wrap md:flex-row-reverse">
                     <div className="w-full md:w-1/3"></div>
                     <div className="w-full md:w-2/3">
-                        <QuestionForm question={question} />
+                        <QuestionForm question={question as any} />
                     </div>
                 </div>
             </div>

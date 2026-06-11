@@ -12,11 +12,25 @@ import slugify from "@/src/utils/slugify";
 import Link from "next/link";
 import { IconTrash } from "@tabler/icons-react";
 
+// ✅ Custom interface for answer documents
+interface AnswerDocument extends Models.Document {
+    content: string;
+    authorId: string;
+    author: {
+        $id: string;
+        name: string;
+        reputation: number;
+    };
+    upvotesDocuments: Models.DocumentList<Models.Document>;
+    downvotesDocuments: Models.DocumentList<Models.Document>;
+    comments: Models.DocumentList<Models.Document>;
+}
+
 const Answers = ({
     answers: _answers,
     questionId,
 }: {
-    answers: Models.DocumentList<Models.Document>;
+    answers: Models.DocumentList<AnswerDocument>;  // ✅ Fixed
     questionId: string;
 }) => {
     const [answers, setAnswers] = React.useState(_answers);
@@ -108,7 +122,7 @@ const Answers = ({
                         <div className="mt-4 flex items-center justify-end gap-1">
                             <picture>
                                 <img
-                                    src={avatars.getInitials(answer.author.name, 36, 36).href}
+                                    src={avatars.getInitials(answer.author.name, 36, 36).toString()}
                                     alt={answer.author.name}
                                     className="rounded-lg"
                                 />
@@ -126,7 +140,7 @@ const Answers = ({
                             </div>
                         </div>
                         <Comments
-                            comments={answer.comments}
+                            comments={answer.comments as any}
                             className="mt-4"
                             type="answer"
                             typeId={answer.$id}

@@ -15,10 +15,18 @@ import { databases, storage } from "@/src/models/client/config";
 import { db, questionATTACHMENTS_BUCKET, questionsCollection } from "@/src/models/name";
 import { Confetti } from "@/src/components/magicui/confetti";
 
+interface QuestionDocument extends Models.Document {
+    title: string;
+    content: string;
+    authorId: string;
+    tags: string[];
+    attachmentId: string;
+}
+
 const LabelInputContainer = ({
     children,
     className,
-}: { 
+}: {
     children: React.ReactNode;
     className?: string;
 }) => {
@@ -35,12 +43,7 @@ const LabelInputContainer = ({
     );
 };
 
-/**
- * ******************************************************************************
- * ![INFO]: for buttons, refer to https://ui.aceternity.com/components/tailwindcss-buttons
- * ******************************************************************************
- */
-const QuestionForm = ({ question }: { question?: Models.Document }) => {
+const QuestionForm = ({ question }: { question?: QuestionDocument }) => {
     const { user } = useAuthStore();
     const [tag, setTag] = React.useState("");
     const router = useRouter();
@@ -57,44 +60,20 @@ const QuestionForm = ({ question }: { question?: Models.Document }) => {
     const [error, setError] = React.useState("");
 
     const loadConfetti = (timeInMS = 3000) => {
-        const end = Date.now() + timeInMS; // 3 seconds
+        const end = Date.now() + timeInMS;
         const colors = ["#a786ff", "#fd8bbc", "#eca184", "#f8deb1"];
-
         const frame = () => {
             if (Date.now() > end) return;
-
-            Confetti({
-                particleCount: 2,
-                angle: 60,
-                spread: 55,
-                startVelocity: 60,
-                origin: { x: 0, y: 0.5 },
-                colors: colors,
-            });
-            Confetti({
-                particleCount: 2,
-                angle: 120,
-                spread: 55,
-                startVelocity: 60,
-                origin: { x: 1, y: 0.5 },
-                colors: colors,
-            });
-
+            Confetti({ particleCount: 2, angle: 60, spread: 55, startVelocity: 60, origin: { x: 0, y: 0.5 }, colors });
+            Confetti({ particleCount: 2, angle: 120, spread: 55, startVelocity: 60, origin: { x: 1, y: 0.5 }, colors });
             requestAnimationFrame(frame);
         };
-
         frame();
     };
 
     const create = async () => {
         if (!formData.attachment) throw new Error("Please upload an image");
-
-        const storageResponse = await storage.createFile(
-            questionATTACHMENTS_BUCKET,
-            ID.unique(),
-            formData.attachment
-        );
-
+        const storageResponse = await storage.createFile(questionATTACHMENTS_BUCKET, ID.unique(), formData.attachment);
         const response = await databases.createDocument(db, questionsCollection, ID.unique(), {
             title: formData.title,
             content: formData.content,
@@ -102,29 +81,18 @@ const QuestionForm = ({ question }: { question?: Models.Document }) => {
             tags: Array.from(formData.tags),
             attachmentId: storageResponse.$id,
         });
-
         loadConfetti();
-
         return response;
     };
 
     const update = async () => {
         if (!question) throw new Error("Please provide a question");
-
         const attachmentId = await (async () => {
             if (!formData.attachment) return question?.attachmentId as string;
-
             await storage.deleteFile(questionATTACHMENTS_BUCKET, question.attachmentId);
-
-            const file = await storage.createFile(
-                questionATTACHMENTS_BUCKET,
-                ID.unique(),
-                formData.attachment
-            );
-
+            const file = await storage.createFile(questionATTACHMENTS_BUCKET, ID.unique(), formData.attachment);
             return file.$id;
         })();
-
         const response = await databases.updateDocument(db, questionsCollection, question.$id, {
             title: formData.title,
             content: formData.content,
@@ -132,30 +100,23 @@ const QuestionForm = ({ question }: { question?: Models.Document }) => {
             tags: Array.from(formData.tags),
             attachmentId: attachmentId,
         });
-
         return response;
     };
 
     const submit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-
-        // didn't check for attachment because it's optional in updating
         if (!formData.title || !formData.content || !formData.authorId) {
             setError(() => "Please fill out all fields");
             return;
         }
-
         setLoading(() => true);
         setError(() => "");
-
         try {
             const response = question ? await update() : await create();
-
             router.push(`/questions/${response.$id}/${slugify(formData.title)}`);
         } catch (error: any) {
             setError(() => error.message);
         }
-
         setLoading(() => false);
     };
 
@@ -170,75 +131,48 @@ const QuestionForm = ({ question }: { question?: Models.Document }) => {
             )}
             <LabelInputContainer>
                 <Label htmlFor="title">
-                    Title
-                    <br />
-                    <small>
-                        Be specific and imagine you&apos;re asking a question to another person.
-                    </small>
+                    Title<br />
+                    <small>Be specific and imagine you&apos;re asking a question to another person.</small>
                 </Label>
                 <Input
-                    id="title"
-                    name="title"
+                    id="title" name="title" type="text"
                     placeholder="e.g. Is there an R function for finding the index of an element in a vector?"
-                    type="text"
                     value={formData.title}
                     onChange={e => setFormData(prev => ({ ...prev, title: e.target.value }))}
                 />
             </LabelInputContainer>
             <LabelInputContainer>
                 <Label htmlFor="content">
-                    What are the details of your problem?
-                    <br />
-                    <small>
-                        Introduce the problem and expand on what you put in the title. Minimum 20
-                        characters.
-                    </small>
+                    What are the details of your problem?<br />
+                    <small>Introduce the problem and expand on what you put in the title. Minimum 20 characters.</small>
                 </Label>
-                <RTE
-                    value={formData.content}
-                    onChange={(value: any) => setFormData(prev => ({ ...prev, content: value || "" }))}
-                />
+                <RTE value={formData.content} onChange={(value: any) => setFormData(prev => ({ ...prev, content: value || "" }))} />
             </LabelInputContainer>
             <LabelInputContainer>
                 <Label htmlFor="image">
-                    Image
-                    <br />
-                    <small>
-                        Add image to your question to make it more clear and easier to understand.
-                    </small>
+                    Image<br />
+                    <small>Add image to your question to make it more clear and easier to understand.</small>
                 </Label>
                 <Input
-                    id="image"
-                    name="image"
-                    accept="image/*"
+                    id="image" name="image" type="file" accept="image/*"
                     placeholder="e.g. Is there an R function for finding the index of an element in a vector?"
-                    type="file"
                     onChange={e => {
                         const files = e.target.files;
                         if (!files || files.length === 0) return;
-                        setFormData(prev => ({
-                            ...prev,
-                            attachment: files[0],
-                        }));
+                        setFormData(prev => ({ ...prev, attachment: files[0] }));
                     }}
                 />
             </LabelInputContainer>
             <LabelInputContainer>
                 <Label htmlFor="tag">
-                    Tags
-                    <br />
-                    <small>
-                        Add tags to describe what your question is about. Start typing to see
-                        suggestions.
-                    </small>
+                    Tags<br />
+                    <small>Add tags to describe what your question is about. Start typing to see suggestions.</small>
                 </Label>
                 <div className="flex w-full gap-4">
                     <div className="w-full">
                         <Input
-                            id="tag"
-                            name="tag"
+                            id="tag" name="tag" type="text"
                             placeholder="e.g. (java c objective-c)"
-                            type="text"
                             value={tag}
                             onChange={e => setTag(() => e.target.value)}
                         />
@@ -248,10 +182,7 @@ const QuestionForm = ({ question }: { question?: Models.Document }) => {
                         type="button"
                         onClick={() => {
                             if (tag.length === 0) return;
-                            setFormData(prev => ({
-                                ...prev,
-                                tags: new Set([...Array.from(prev.tags), tag]),
-                            }));
+                            setFormData(prev => ({ ...prev, tags: new Set([...Array.from(prev.tags), tag]) }));
                             setTag(() => "");
                         }}
                     >
@@ -269,15 +200,8 @@ const QuestionForm = ({ question }: { question?: Models.Document }) => {
                                 <div className="relative z-10 flex items-center space-x-2 rounded-full bg-zinc-950 px-4 py-0.5 ring-1 ring-white/10">
                                     <span>{tag}</span>
                                     <button
-                                        onClick={() => {
-                                            setFormData(prev => ({
-                                                ...prev,
-                                                tags: new Set(
-                                                    Array.from(prev.tags).filter(t => t !== tag)
-                                                ),
-                                            }));
-                                        }}
                                         type="button"
+                                        onClick={() => setFormData(prev => ({ ...prev, tags: new Set(Array.from(prev.tags).filter(t => t !== tag)) }))}
                                     >
                                         <IconX size={12} />
                                     </button>

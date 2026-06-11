@@ -25,7 +25,10 @@
     "zustand": "^5.0.14"
   },
   "scripts": {
-    "dev": "next dev"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
   },
   "devDependencies": {
     "@types/node": "^25.9.1",
